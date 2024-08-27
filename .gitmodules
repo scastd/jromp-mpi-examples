@@ -1,0 +1,3 @@
+[submodule "3rd-party/ompi"]
+	path = 3rd-party/ompi
+	url = git@github.com:open-mpi/ompi.git
