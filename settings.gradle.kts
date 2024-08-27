@@ -1,2 +1,2 @@
-rootProject.name = "java-mpi-template"
+rootProject.name = "jromp-mpi-examples"
 

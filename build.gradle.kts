@@ -33,17 +33,29 @@ tasks.compileJava {
     options.forkOptions.executable = "$mpiBinPath/mpijavac.pl"
 }
 
-tasks.register<Exec>("runMPIProgram") {
-    dependsOn("classes")
+val javaFolder = "src/main/java/jromp/mpi/examples"
+val classesInFolder = fileTree(javaFolder).matching {
+    include("**/*.java")
+}
 
-    group = "application"
-    description = "Run a program with mpirun"
+for (file in classesInFolder) {
+    val className = file.path.substringAfter(javaFolder)
+        .substringBeforeLast(".java")
+        .replace("/", "")
 
-    commandLine = listOf("$mpiBinPath/mpirun", "java", "-cp", "build/classes/java/main", "io.github.mpi.Main")
+    tasks.register<Exec>("run$className") {
+        dependsOn("classes")
 
-    environment("LD_LIBRARY_PATH", mpiLibPath)
+        group = "application"
+        description = "Run $className with mpirun"
 
-    standardOutput = System.out
-    errorOutput = System.err
-    isIgnoreExitValue = false
+        commandLine =
+            listOf("$mpiBinPath/mpirun", "java", "-cp", "build/classes/java/main", "jromp.mpi.examples.$className")
+
+        environment("LD_LIBRARY_PATH", mpiLibPath)
+
+        standardOutput = System.out
+        errorOutput = System.err
+        isIgnoreExitValue = false
+    }
 }

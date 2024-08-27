@@ -44,3 +44,4 @@ bin/
 ### Custom ###
 .idea
 libs
+cmake-build-debug
