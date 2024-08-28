@@ -37,12 +37,12 @@ public class Burro {
 
     private static int N;
     private static int DECK_SIZE;
-    private static int selection_limit = SAME_CARD_SELECTION_LIMIT;
-    private static int previous_selected_card = -1;
-    private static Ranks ranks;
+    private static int SELECTION_LIMIT = SAME_CARD_SELECTION_LIMIT;
+    private static int PREVIOUS_SELECTED_CARD = -1;
+    private static Ranks RANKS;
 
     private static final int END_GAME_MESSAGE = Integer.MAX_VALUE;
-    private static final Random random = new Random();
+    private static final Random RANDOM = new Random();
 
     private String handToString(int[] hand) {
         StringBuilder sb = new StringBuilder();
@@ -60,22 +60,22 @@ public class Burro {
 
     private void initializeDeck(int[] deck) {
         int[] numbers = new int[N];
-        int[] numbers_count = new int[N];
+        int[] numbersCount = new int[N];
 
         for (int i = 0; i < N; i++) {
             numbers[i] = i;
-            numbers_count[i] = 0;
+            numbersCount[i] = 0;
         }
 
         for (int i = 0; i < DECK_SIZE; i++) {
-            int index = random.nextInt(N);
+            int index = RANDOM.nextInt(N);
 
-            while (numbers_count[index] >= HAND_SIZE) {
-                index = random.nextInt(N);
+            while (numbersCount[index] >= HAND_SIZE) {
+                index = RANDOM.nextInt(N);
             }
 
             deck[i] = numbers[index];
-            numbers_count[index]++;
+            numbersCount[index]++;
         }
     }
 
@@ -92,71 +92,71 @@ public class Burro {
     }
 
     private CardSelection select_card(int[] hand) {
-        int selected_pos;
-        int selected_card;
+        int selectedPos;
+        int selectedCard;
 
         if (SIMPLE_CARD_SELECTION) {
-            selected_pos = random.nextInt(HAND_SIZE);
-            selected_card = hand[selected_pos];
+            selectedPos = RANDOM.nextInt(HAND_SIZE);
+            selectedCard = hand[selectedPos];
         } else {
             // Select the least frequent card in the hand
-            int[] hand_numbers = new int[HAND_SIZE];
-            int[] numbers_count = new int[HAND_SIZE];
+            int[] handNumbers = new int[HAND_SIZE];
+            int[] numbersCount = new int[HAND_SIZE];
 
             for (int i = 0; i < HAND_SIZE; i++) {
-                hand_numbers[i] = hand[i];
-                numbers_count[i] = 0;
+                handNumbers[i] = hand[i];
+                numbersCount[i] = 0;
 
                 for (int j = 0; j < HAND_SIZE; j++) {
-                    if (hand_numbers[i] == hand[j]) {
-                        numbers_count[i]++;
+                    if (handNumbers[i] == hand[j]) {
+                        numbersCount[i]++;
                     }
                 }
             }
 
-            selected_pos = 0;
-            selected_card = hand[selected_pos];
+            selectedPos = 0;
+            selectedCard = hand[selectedPos];
 
             for (int i = 1; i < HAND_SIZE; i++) {
-                if (numbers_count[i] < numbers_count[selected_pos]) {
-                    selected_pos = i;
-                    selected_card = hand_numbers[selected_pos]; // This is the least frequent card
+                if (numbersCount[i] < numbersCount[selectedPos]) {
+                    selectedPos = i;
+                    selectedCard = handNumbers[selectedPos]; // This is the least frequent card
                 }
             }
 
             // If the selected card is the same as the previous one, select another random card.
-            selection_limit--;
-            if (selected_card == previous_selected_card && selection_limit == 0) {
+            SELECTION_LIMIT--;
+            if (selectedCard == PREVIOUS_SELECTED_CARD && SELECTION_LIMIT == 0) {
                 do {
-                    selected_pos = random.nextInt(HAND_SIZE);
-                } while (hand[selected_pos] == previous_selected_card); // Prevent selecting the same card
+                    selectedPos = RANDOM.nextInt(HAND_SIZE);
+                } while (hand[selectedPos] == PREVIOUS_SELECTED_CARD); // Prevent selecting the same card
 
-                selected_card = hand[selected_pos]; // Update the selected card if needed
-                selection_limit = SAME_CARD_SELECTION_LIMIT;
+                selectedCard = hand[selectedPos]; // Update the selected card if needed
+                SELECTION_LIMIT = SAME_CARD_SELECTION_LIMIT;
             }
 
-            previous_selected_card = selected_card; // Update the previous selected card
+            PREVIOUS_SELECTED_CARD = selectedCard; // Update the previous selected card
         }
 
-        return new CardSelection(selected_pos, selected_card);
+        return new CardSelection(selectedPos, selectedCard);
     }
 
-    void notify_all_game_ended() throws MPIException {
-        System.out.print(String.format("Process %d won the game\n", ranks.self));
+    void notifyAllGameEnded() throws MPIException {
+        System.out.print(String.format("Process %d won the game\n", RANKS.self));
 
         // Send the end game received_card to all processes except me
         Request[] requests = new Request[N - 1];
-        int request_count = 0;
+        int requestCount = 0;
 
         for (int i = 0; i < N; i++) {
-            if (i == ranks.self) {
+            if (i == RANKS.self) {
                 continue;
             }
 
             IntBuffer buffer = MPI.newIntBuffer(1);
             buffer.put(END_GAME_MESSAGE);
             Request request = MPI.COMM_WORLD.iSend(buffer, 1, MPI.INT, i, GAME_ENDED_TAG);
-            requests[request_count++] = request;
+            requests[requestCount++] = request;
         }
 
         // Wait for all requests to finish
@@ -169,18 +169,18 @@ public class Burro {
 
     void game(int[] hand) throws MPIException {
         int round = 0;
-        boolean game_over = false;
-        Request barrier_request;
-        Request recv_request;
-        Request send_request;
+        boolean gameOver = false;
+        Request barrierRequest;
+        Request recvRequest;
+        Request sendRequest;
         Status status;
-        int received_message_flag;
-        int received_card;
+        int receivedMessageFlag;
+        int receivedCard;
         CardSelection selection = null;
 
         debugPrint(
                 "Process %d starts the game with hand: %s\n",
-                ranks.self, handToString(hand)
+                RANKS.self, handToString(hand)
         );
 
         // Allow all the processes to print the initial hand before starting the game loop
@@ -189,22 +189,22 @@ public class Burro {
         // Main game loop
         do {
             if (isFullHand(hand)) {
-                game_over = true;
-                notify_all_game_ended();
+                gameOver = true;
+                notifyAllGameEnded();
             }
 
             sync();
 
             // The winning process does not select card anymore
-            if (!game_over) {
+            if (!gameOver) {
                 // Select a selected_card from the hand and send it to the next process
                 selection = select_card(hand);
 
                 System.out.print(
-                        String.format("P%d: Before sending card %d to P%d\n", ranks.self, selection.card, ranks.next));
+                        String.format("P%d: Before sending card %d to P%d\n", RANKS.self, selection.card, RANKS.next));
                 IntBuffer cardSelectionBuffer = MPI.newIntBuffer(1).put(selection.card);
-                send_request = MPI.COMM_WORLD.iSend(cardSelectionBuffer, 1, MPI.INT, ranks.next, GAME_NOT_ENDED_TAG);
-                send_request.waitFor();
+                sendRequest = MPI.COMM_WORLD.iSend(cardSelectionBuffer, 1, MPI.INT, RANKS.next, GAME_NOT_ENDED_TAG);
+                sendRequest.waitFor();
             }
 
             /**
@@ -213,8 +213,8 @@ public class Burro {
              */
             sync();
 
-            if (game_over) {
-                debugPrint("Process %d exiting\n", ranks.self);
+            if (gameOver) {
+                debugPrint("Process %d exiting\n", RANKS.self);
                 break;
                 // Only the winner process exits here, since it is the only one that has game_over = true.
             }
@@ -222,41 +222,41 @@ public class Burro {
             // Expect any tag and check the one received after
             do {
                 status = MPI.COMM_WORLD.iProbe(MPI.ANY_SOURCE, MPI.ANY_TAG);
-                received_message_flag = status.getCount(MPI.INT);
-            } while (received_message_flag == 0);
+                receivedMessageFlag = status.getCount(MPI.INT);
+            } while (receivedMessageFlag == 0);
 
             if (status.getTag() == GAME_ENDED_TAG) {
                 // Not really needed, but it is better to be safe
                 IntBuffer receivedInt = MPI.newIntBuffer(1);
-                recv_request = MPI.COMM_WORLD.iRecv(receivedInt, 1, MPI.INT, status.getSource(), GAME_ENDED_TAG);
-                recv_request.waitFor();
-                received_card = receivedInt.get(0);
+                recvRequest = MPI.COMM_WORLD.iRecv(receivedInt, 1, MPI.INT, status.getSource(), GAME_ENDED_TAG);
+                recvRequest.waitFor();
+                receivedCard = receivedInt.get(0);
 
                 debugPrint(
                         "P%d (I%d): Exiting. Received end game message from P%d\n",
-                        ranks.self, round++, status.getSource()
+                        RANKS.self, round++, status.getSource()
                 );
 
-                game_over = true;
+                gameOver = true;
                 // Exit the loop
             } else if (status.getTag() == GAME_NOT_ENDED_TAG) {
                 IntBuffer receivedInt = MPI.newIntBuffer(1);
-                recv_request = MPI.COMM_WORLD.iRecv(receivedInt, 1, MPI.INT, ranks.prev, GAME_NOT_ENDED_TAG);
-                recv_request.waitFor();
-                received_card = receivedInt.get(0);
+                recvRequest = MPI.COMM_WORLD.iRecv(receivedInt, 1, MPI.INT, RANKS.prev, GAME_NOT_ENDED_TAG);
+                recvRequest.waitFor();
+                receivedCard = receivedInt.get(0);
 
                 String handString = handToString(hand);
 
                 // Store the received card in the hand
-                hand[selection.pos] = received_card;
+                hand[selection.pos] = receivedCard;
 
                 debugPrint(
                         "P%d (I%d): Sent %d to P%d. Recv %d from P%d. Hand: %s -> %s\n",
-                        ranks.self, round++, selection.card, ranks.next,
-                        received_card, ranks.prev, handString, handToString(hand)
+                        RANKS.self, round++, selection.card, RANKS.next,
+                        receivedCard, RANKS.prev, handString, handToString(hand)
                 );
             }
-        } while (!game_over);
+        } while (!gameOver);
     }
 
     public static void main(String[] args) throws MPIException {
@@ -265,12 +265,12 @@ public class Burro {
         int rank = MPI.COMM_WORLD.getRank();
         int size = MPI.COMM_WORLD.getSize();
 
-        random.setSeed(System.currentTimeMillis() + rank * 2);
+        RANDOM.setSeed(System.currentTimeMillis() + rank * 2);
 
         // Global variable initialization
         N = size;
         DECK_SIZE = N * HAND_SIZE;
-        ranks = new Ranks(
+        RANKS = new Ranks(
                 (rank - 1 + N) % N,
                 rank,
                 (rank + 1) % N
