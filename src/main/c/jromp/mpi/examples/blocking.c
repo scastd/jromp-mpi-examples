@@ -3,7 +3,7 @@
 #include <time.h>
 #include <mpi.h>
 
-#define N 20000
+#define N 10000
 
 int main(int argc, char *argv[]) {
 	int rank;

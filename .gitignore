@@ -45,3 +45,4 @@ bin/
 .idea
 libs
 cmake-build-debug
+*.o

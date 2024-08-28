@@ -6,6 +6,7 @@ import mpi.MPIException;
 import java.nio.DoubleBuffer;
 import java.util.Random;
 
+@SuppressWarnings("all")
 public class Blocking {
 	private static final int N = 15000;
 	private static final Random random = new Random();

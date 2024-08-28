@@ -3,8 +3,6 @@ project(jromp_mpi_examples C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(blocking src/main/c/jromp/mpi/examples/blocking.c)
-
 # MPI
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
@@ -14,3 +12,7 @@ if (MPI_FOUND)
 endif ()
 
 set(CMAKE_C_COMPILER mpicc)
+
+set(EXAMPLES_PATH src/main/c/jromp/mpi/examples)
+add_executable(blocking ${EXAMPLES_PATH}/blocking.c)
+add_executable(burro ${EXAMPLES_PATH}/burro.c)
