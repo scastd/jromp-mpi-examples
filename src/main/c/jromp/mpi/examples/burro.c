@@ -262,16 +262,16 @@ void game(int *hand) {
             MPI_Irecv(&received_card, 1, MPI_INT, ranks.prev, GAME_NOT_ENDED_TAG, MPI_COMM_WORLD, &recv_request);
             MPI_Wait(&recv_request, MPI_STATUS_IGNORE);
 
-            DEBUG_PRINT(
-                    "P%d (I%d): Sent %d to P%d. Recv %d from P%d. Hand: %s -> ",
-                    ranks.self, round++, selection.card, ranks.next,
-                    received_card, ranks.prev, hand_to_string(hand)
-                    );
+            const string hand_str = hand_to_string(hand);
 
             // Store the received card in the hand
             hand[selection.pos] = received_card;
 
-            DEBUG_PRINT("%s\n", hand_to_string(hand));
+            DEBUG_PRINT(
+                    "P%d (I%d): Sent %d to P%d. Recv %d from P%d. Hand: %s -> %s\n",
+                    ranks.self, round++, selection.card, ranks.next,
+                    received_card, ranks.prev, hand_str, hand_to_string(hand)
+                    );
         }
     } while (!game_over);
 }

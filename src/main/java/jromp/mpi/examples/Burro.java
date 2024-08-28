@@ -244,16 +244,16 @@ public class Burro {
 				recv_request.waitFor();
 				received_card = receivedInt.get(0);
 
-				debugPrint(
-						"P%d (I%d): Sent %d to P%d. Recv %d from P%d. Hand: %s -> ",
-						ranks.self, round++, selection.card, ranks.next,
-						received_card, ranks.prev, handToString(hand)
-				);
+				String handString = handToString(hand);
 
 				// Store the received card in the hand
 				hand[selection.pos] = received_card;
 
-				debugPrint("%s\n", handToString(hand));
+				debugPrint(
+						"P%d (I%d): Sent %d to P%d. Recv %d from P%d. Hand: %s -> %s\n",
+						ranks.self, round++, selection.card, ranks.next,
+						received_card, ranks.prev, handString, handToString(hand)
+				);
 			}
 		} while (!game_over);
 	}
