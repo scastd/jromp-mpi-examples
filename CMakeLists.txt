@@ -14,5 +14,7 @@ endif ()
 set(CMAKE_C_COMPILER mpicc)
 
 set(EXAMPLES_PATH src/main/c/jromp/mpi/examples)
+
 add_executable(blocking ${EXAMPLES_PATH}/blocking.c)
 add_executable(burro ${EXAMPLES_PATH}/burro.c)
+add_executable(cross ${EXAMPLES_PATH}/cross.c)

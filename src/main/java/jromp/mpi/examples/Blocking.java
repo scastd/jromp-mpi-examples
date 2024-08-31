@@ -8,7 +8,7 @@ import java.util.Random;
 
 @SuppressWarnings("all")
 public class Blocking {
-    private static final int N = 15000;
+    private static final int N = 10000;
     private static final Random random = new Random();
 
     public static void main(String[] args) throws MPIException {

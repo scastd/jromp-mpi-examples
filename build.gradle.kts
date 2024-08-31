@@ -34,24 +34,15 @@ tasks.compileJava {
     options.forkOptions.executable = "$mpiBinPath/mpijavac.pl"
 }
 
-val javaFolder = "src/main/java/jromp/mpi/examples"
-val classesInFolder = fileTree(javaFolder).matching {
-    include("**/*.java")
-}
-
-for (file in classesInFolder) {
-    val className = file.path.substringAfter(javaFolder)
-        .substringBeforeLast(".java")
-        .replace("/", "")
-
-    tasks.register<Exec>("run$className") {
+fun createTaskWithNumProcesses(name: String, processes: Int): Unit {
+    tasks.register<Exec>("run$name") {
         dependsOn("classes")
 
         group = "application"
-        description = "Run $className with mpirun"
+        description = "Run $name with mpirun"
 
         commandLine =
-            listOf("$mpiBinPath/mpirun", "java", "-cp", "build/classes/java/main", "jromp.mpi.examples.$className")
+            listOf("$mpiBinPath/mpirun", "-np", "$processes", "java", "-cp", "build/classes/java/main", "jromp.mpi.examples.$name")
 
         environment("LD_LIBRARY_PATH", mpiLibPath)
 
@@ -60,3 +51,7 @@ for (file in classesInFolder) {
         isIgnoreExitValue = false
     }
 }
+
+createTaskWithNumProcesses("Blocking", 6)
+createTaskWithNumProcesses("Burro", 6)
+createTaskWithNumProcesses("Cross", 4)
