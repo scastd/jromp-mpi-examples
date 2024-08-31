@@ -30,7 +30,7 @@ public class Cross {
     }
 
     private static final Random RANDOM = new Random();
-    private static final int N = 1000;
+    private static final int N = 10000;
     private static final int NO_VALUE = -1;
 
     void print_matrix(int[] matrix, int rowSize) {
@@ -47,7 +47,7 @@ public class Cross {
 
     static void initialize_matrix(int[] matrix, int size) {
         for (int i = 0; i < size; i++) {
-            matrix[i] = 1;
+            matrix[i] = RANDOM.nextInt(10);
         }
     }
 
@@ -151,7 +151,7 @@ public class Cross {
             int[] matrix = new int[N * N];
             Arrays.fill(matrix, NO_VALUE);
 
-            limits = sample_limits();
+            limits = generate_limits();
             System.out.print(
                     String.format("Limits: v_i:%d   v_j:%d   h_k:%d   h_t:%d\n", limits.v_i, limits.v_j, limits.h_k,
                                   limits.h_t));
@@ -213,20 +213,17 @@ public class Cross {
 
             Datatype cross_type = Datatype.createIndexed(array_of_block_lengths, array_of_displacements, MPI.INT);
             cross_type.commit();
-            System.out.println("Cross datatype created of size: " + cross_type.getSize());
 
 //            print_cross(matrix, limits);
 
             // Send the cross to all the processes
             for (int i = 1; i < size; i++) {
-                System.out.println("Cross sent: " + i);
                 MPI.COMM_WORLD.send(intArrayToByteBuffer(matrix), 1, cross_type, i, 0);
             }
 
             // Receive all the sums
             for (int i = 1; i < size; i++) {
                 ByteBuffer sum = MPI.newByteBuffer(4);
-                System.out.println("Receiving sum from process " + i);
                 MPI.COMM_WORLD.recv(sum, 1, MPI.INT, i, 0);
                 System.out.print(String.format("Sum (process %d): %d\n", i, sum.getInt()));
             }
@@ -246,8 +243,6 @@ public class Cross {
             int[] limit_h_k = new int[1];
             int[] limit_h_t = new int[1];
 
-            System.out.println("Unpacking buffer");
-
             position = MPI.COMM_WORLD.unpack(buffer, position, limit_v_i, 1, MPI.INT);
             position = MPI.COMM_WORLD.unpack(buffer, position, limit_v_j, 1, MPI.INT);
             position = MPI.COMM_WORLD.unpack(buffer, position, limit_h_k, 1, MPI.INT);
@@ -258,37 +253,20 @@ public class Cross {
             limits.h_k = limit_h_k[0];
             limits.h_t = limit_h_t[0];
 
-            // Print the limits
-            System.out.print(String.format("Unpacked limits (process %d): v_i:%d   v_j:%d   h_k:%d   h_t:%d\n", rank,
-                                           limits.v_i, limits.v_j, limits.h_k, limits.h_t));
-
             // Receive the vector of elements
             final int cross_elements =
                     (limits.v_j - limits.v_i + 1) * limits.h_k // Upper block
                             + N * (limits.h_t - limits.h_k + 1) // Middle block
                             + (limits.v_j - limits.v_i + 1) * (N - limits.h_t - 1); // Lower block
 
-            System.out.println("Cross elements: " + cross_elements);
-
             IntBuffer cross_local_buffer = MPI.newIntBuffer(cross_elements);
-
-            System.out.println("Receiving cross");
             MPI.COMM_WORLD.recv(cross_local_buffer, cross_elements, MPI.INT, 0, 0);
-            System.out.println("Cross received");
-
-            // Convert the byte array to an integer array
-            int[] cross_local = new int[cross_elements];
-            cross_local_buffer.get(cross_local);
-
-            System.out.println("Cross received: " + Arrays.toString(cross_local));
 
             // Sum the elements
             int sum = 0;
             for (int i = 0; i < cross_elements; i++) {
-                sum += cross_local[i];
+                sum += cross_local_buffer.get(i);
             }
-
-            System.out.println("Sum: " + sum);
 
             // Send the sum to the master
             MPI.COMM_WORLD.send(new int[] { sum }, 1, MPI.INT, 0, 0);

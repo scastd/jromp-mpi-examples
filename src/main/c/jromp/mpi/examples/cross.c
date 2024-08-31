@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 
-#define N 1000
+#define N 20000
 #define UNUSED __attribute__((unused))
 #define NO_VALUE (-1)
 
@@ -34,7 +34,7 @@ UNUSED void print_matrix(const int *matrix, const int row_size) {
 
 void initialize_matrix(int *matrix, const int size) {
     for (int i = 0; i < size; i++) {
-        matrix[i] = i/*rand() % 10*/;
+        matrix[i] = rand() % 10;
     }
 }
 
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
         int *matrix = malloc(N * N * sizeof(int));
         memset(matrix, NO_VALUE, N * N * sizeof(int));
 
-        limits = sample_limits();
+        limits = generate_limits();
         printf("Limits: v_i:%d   v_j:%d   h_k:%d   h_t:%d\n", limits.v_i, limits.v_j, limits.h_k, limits.h_t);
 
         double start = MPI_Wtime();
@@ -181,10 +181,6 @@ int main(int argc, char *argv[]) {
         MPI_Type_indexed(num_blocks, array_of_block_lengths, array_of_displacements, MPI_INT, &cross_type);
         MPI_Type_commit(&cross_type);
 
-        int s;
-        MPI_Type_size(cross_type, &s);
-        printf("Datatype size: %lu\n", s / sizeof(int));
-
         //		print_cross(matrix, &limits);
 
         // Send the cross to all the processes
@@ -225,7 +221,6 @@ int main(int argc, char *argv[]) {
                 (limits.v_j - limits.v_i + 1) * limits.h_k // Upper block
                 + N * (limits.h_t - limits.h_k + 1) // Middle block
                 + (limits.v_j - limits.v_i + 1) * (N - limits.h_t - 1); // Lower block
-        printf("Cross elements (process %d): %d\n", rank, cross_elements);
 
         buffer = (int *) realloc(buffer, cross_elements * sizeof(int));
 
