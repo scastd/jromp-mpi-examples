@@ -11,10 +11,29 @@ import java.util.Random;
 
 @SuppressWarnings("all")
 public class Cross {
+    private static final Random RANDOM = new Random();
+    private static final int N = 20000;
+    private static final int NO_VALUE = -1;
+
     static final class CrossLimits {
+        /**
+         * Vertical left limit
+         */
         private int v_i;
+
+        /**
+         * Vertical right limit
+         */
         private int v_j;
+
+        /**
+         * Horizontal top limit
+         */
         private int h_k;
+
+        /**
+         * Horizontal bottom limit
+         */
         private int h_t;
 
         CrossLimits() {
@@ -29,20 +48,16 @@ public class Cross {
         }
     }
 
-    private static final Random RANDOM = new Random();
-    private static final int N = 10000;
-    private static final int NO_VALUE = -1;
-
     void print_matrix(int[] matrix, int rowSize) {
         for (int i = 0; i < rowSize; i++) {
-            for (int j = 0; j < rowSize; ++j) {
+            for (int j = 0; j < rowSize; j++) {
                 System.out.print(String.format("%d ", matrix[i * rowSize + j]));
             }
 
-            System.out.print("\n");
+            System.out.println();
         }
 
-        System.out.print("\n");
+        System.out.println();
     }
 
     static void initialize_matrix(int[] matrix, int size) {
@@ -52,26 +67,17 @@ public class Cross {
     }
 
     static CrossLimits generate_limits() {
-        int v_i = RANDOM.nextInt(N);
-        int h_k = RANDOM.nextInt(N);
-        CrossLimits limits = new CrossLimits(v_i,
-                                             v_i + RANDOM.nextInt((N - v_i)),
-                                             h_k,
-                                             h_k + RANDOM.nextInt((N - h_k)));
+        CrossLimits limits = new CrossLimits();
 
         // i < j and k < t (strictly). If not met, generate another second limits
-        while (limits.v_i >= limits.v_j || limits.h_k >= limits.h_t) {
+        do {
             limits.v_i = RANDOM.nextInt(N);
-            limits.v_j = limits.v_i + RANDOM.nextInt((N - limits.v_i));
+            limits.v_j = limits.v_i + RANDOM.nextInt(N - limits.v_i);
             limits.h_k = RANDOM.nextInt(N);
-            limits.h_t = limits.h_k + RANDOM.nextInt((N - limits.h_k));
-        }
+            limits.h_t = limits.h_k + RANDOM.nextInt(N - limits.h_k);
+        } while (limits.v_i >= limits.v_j || limits.h_k >= limits.h_t);
 
         return limits;
-    }
-
-    static CrossLimits sample_limits() {
-        return new CrossLimits(12, 29, 17, 36);
     }
 
     static void print_cross(int[] matrix, CrossLimits limits) {
@@ -124,16 +130,6 @@ public class Cross {
         return buffer;
     }
 
-    private static int[] byteBufferToIntArray(ByteBuffer buffer) {
-        int[] array = new int[buffer.capacity() / Integer.BYTES];
-
-        for (int i = 0; i < array.length; i++) {
-            array[i] = buffer.getInt();
-        }
-
-        return array;
-    }
-
     public static void main(String[] args) throws MPIException {
         MPI.Init(args);
 
@@ -152,26 +148,22 @@ public class Cross {
             Arrays.fill(matrix, NO_VALUE);
 
             limits = generate_limits();
-            System.out.print(
-                    String.format("Limits: v_i:%d   v_j:%d   h_k:%d   h_t:%d\n", limits.v_i, limits.v_j, limits.h_k,
-                                  limits.h_t));
+            System.out.print(String.format("Limits: v_i:%d   v_j:%d   h_k:%d   h_t:%d\n",
+                                           limits.v_i, limits.v_j, limits.h_k, limits.h_t));
 
             double start = MPI.wtime();
             initialize_matrix(matrix, N * N);
             double end = MPI.wtime();
             System.out.print(String.format("Matrix initialization time: %f\n", end - start));
 
-            //		print_matrix(matrix, N);
+            // print_matrix(matrix, N);
             position = 0;
-
             position = MPI.COMM_WORLD.pack(new int[] { limits.v_i }, 1, MPI.INT, buffer, position);
             position = MPI.COMM_WORLD.pack(new int[] { limits.v_j }, 1, MPI.INT, buffer, position);
             position = MPI.COMM_WORLD.pack(new int[] { limits.h_k }, 1, MPI.INT, buffer, position);
             position = MPI.COMM_WORLD.pack(new int[] { limits.h_t }, 1, MPI.INT, buffer, position);
 
             start = MPI.wtime();
-
-//            System.out.println("Buffer: " + Arrays.toString(buffer));
 
             // Send the limits to all the processes
             for (int i = 1; i < size; i++) {
@@ -180,6 +172,7 @@ public class Cross {
 
             // Create the cross datatype
             int num_elements = 0;
+            Datatype cross_type;
             int counter = 0;
             final int num_blocks =
                     limits.h_k // Upper block
@@ -211,7 +204,7 @@ public class Cross {
                 counter++;
             }
 
-            Datatype cross_type = Datatype.createIndexed(array_of_block_lengths, array_of_displacements, MPI.INT);
+            cross_type = Datatype.createIndexed(array_of_block_lengths, array_of_displacements, MPI.INT);
             cross_type.commit();
 
 //            print_cross(matrix, limits);
@@ -230,10 +223,9 @@ public class Cross {
 
             end = MPI.wtime();
 
-            // Free the datatype
-            cross_type.free();
-
             System.out.print(String.format("Total time: %f\n", end - start));
+
+            cross_type.free();
         } else {
             MPI.COMM_WORLD.recv(buffer, 4, MPI.INT, 0, 0);
 

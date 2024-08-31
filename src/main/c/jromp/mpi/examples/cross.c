@@ -22,7 +22,7 @@ struct cross_limits {
 
 UNUSED void print_matrix(const int *matrix, const int row_size) {
     for (int i = 0; i < row_size; i++) {
-        for (int j = 0; j < row_size; ++j) {
+        for (int j = 0; j < row_size; j++) {
             printf("%d ", matrix[i * row_size + j]);
         }
 
@@ -42,23 +42,14 @@ struct cross_limits generate_limits() {
     struct cross_limits limits;
 
     // i < j and k < t (strictly). If not met, generate another second limits
-    limits.v_i = rand() % N;
-    limits.v_j = limits.v_i + rand() % (N - limits.v_i);
-    limits.h_k = rand() % N;
-    limits.h_t = limits.h_k + rand() % (N - limits.h_k);
-
-    while (limits.v_i >= limits.v_j || limits.h_k >= limits.h_t) {
+    do {
         limits.v_i = rand() % N;
         limits.v_j = limits.v_i + rand() % (N - limits.v_i);
         limits.h_k = rand() % N;
         limits.h_t = limits.h_k + rand() % (N - limits.h_k);
-    }
+    } while (limits.v_i >= limits.v_j || limits.h_k >= limits.h_t);
 
     return limits;
-}
-
-struct cross_limits sample_limits() {
-    return (struct cross_limits){ 12, 29, 17, 36 };
 }
 
 UNUSED void print_cross(const int *matrix, const struct cross_limits *limits) {
@@ -146,12 +137,11 @@ int main(int argc, char *argv[]) {
         // Create the cross datatype
         int num_elements = 0;
         MPI_Datatype cross_type;
-
+        int counter = 0;
         const int num_blocks =
                 limits.h_k // Upper block
                 + 1 // Middle block
                 + (N - limits.h_t - 1); // Lower block
-        int counter = 0;
 
         int *array_of_block_lengths = malloc(num_blocks * sizeof(int));
         int *array_of_displacements = malloc(num_blocks * sizeof(int));
@@ -212,9 +202,6 @@ int main(int argc, char *argv[]) {
         MPI_Unpack(buffer, limit_size, &position, &limits.v_j, 1, MPI_INT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, limit_size, &position, &limits.h_k, 1, MPI_INT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, limit_size, &position, &limits.h_t, 1, MPI_INT, MPI_COMM_WORLD);
-
-        // Print the limits
-        //		printf("Limits (process %d): v_i:%d   v_j:%d   h_k:%d   h_t:%d\n", rank, limits.v_i, limits.v_j, limits.h_k, limits.h_t);
 
         // Receive the vector of elements
         const int cross_elements =
