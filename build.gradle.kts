@@ -34,24 +34,47 @@ tasks.compileJava {
     options.forkOptions.executable = "$mpiBinPath/mpijavac.pl"
 }
 
-fun createTaskWithNumProcesses(name: String, processes: Int): Unit {
+fun createTaskWithNumProcesses(name: String, processes: Int, debug: Boolean) {
     tasks.register<Exec>("run$name") {
         dependsOn("classes")
 
         group = "application"
         description = "Run $name with mpirun"
 
+        val classpath = sourceSets.main.get().runtimeClasspath.asPath
+        val mpiRunParameters = mutableListOf("--bind-to", "none")
+
+        if (debug) {
+            mpiRunParameters.add("--report-bindings")
+        }
+
         commandLine =
-            listOf("$mpiBinPath/mpirun", "-np", "$processes", "java", "-cp", "build/classes/java/main", "jromp.mpi.examples.$name")
+            listOf(
+                "$mpiBinPath/mpirun",
+                *mpiRunParameters.toTypedArray(),
+                "-np", "$processes",
+                "java", "-cp", classpath, "jromp.mpi.examples.$name"
+            )
 
         environment("LD_LIBRARY_PATH", mpiLibPath)
 
         standardOutput = System.out
         errorOutput = System.err
         isIgnoreExitValue = false
+
+        if (debug) {
+            doLast {
+                val cmd = environment.map { (key, value) -> "$key=$value" }.toMutableList()
+                cmd.addAll(commandLine)
+                println()
+                println()
+                println("\u001B[33mExecuted command:\n  ${cmd.joinToString(" ")}\u001B[0m")
+            }
+        }
     }
 }
 
-createTaskWithNumProcesses("Blocking", 6)
-createTaskWithNumProcesses("Burro", 6)
-createTaskWithNumProcesses("Cross", 4)
+createTaskWithNumProcesses("Blocking", 6, true)
+createTaskWithNumProcesses("Burro", 6, true)
+createTaskWithNumProcesses("Cross", 4, true)
+createTaskWithNumProcesses("FullParallel", 3, true)
