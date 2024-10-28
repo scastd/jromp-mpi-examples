@@ -22,7 +22,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
-    implementation("io.github.java-romp:jromp:1.1.1")
+    implementation("io.github.java-romp:jromp:2.2.0")
     implementation(files("$mpiLibPath/mpi.jar"))
 }
 
